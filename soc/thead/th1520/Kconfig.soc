@@ -1,0 +1,15 @@
+# Copyright (c) 2026 BeagleV-Ahead Zephyr Port
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_FAMILY_THEAD_TH1520
+	bool
+
+config SOC_FAMILY
+	default "thead_th1520" if SOC_FAMILY_THEAD_TH1520
+
+config SOC_TH1520
+	bool
+	select SOC_FAMILY_THEAD_TH1520
+
+config SOC
+	default "th1520" if SOC_TH1520

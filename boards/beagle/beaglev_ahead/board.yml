@@ -1,0 +1,11 @@
+board:
+  name: beaglev_ahead
+  full_name: BeagleV-Ahead (T-Head TH1520)
+  vendor: beagle
+  socs:
+    - name: th1520
+      variants:
+        - name: smp
+        - name: smode
+        - name: opensbi
+        - name: opensbi_smp

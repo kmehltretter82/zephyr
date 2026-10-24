@@ -126,8 +126,14 @@ m_mode_set_timer:
     /* a0 = timer deadline (absolute time value) */
     li t0, MTIMECMP0
     /* write new deadline to mtimecmp[0] */
-#ifdef CONFIG_64BIT
+#if defined(CONFIG_64BIT) && DT_REG_HAS_NAME(DT_INST(0, riscv_machine_timer), mtime)
     sd a0, 0(t0)
+#elif defined(CONFIG_64BIT)
+    li t1, -1
+    sw t1, 4(t0)
+    sw a0, 0(t0)
+    srli t1, a0, 32
+    sw t1, 4(t0)
 #else
     li t1, -1
     sw t1, REGBYTES(t0)  /* avoid false triggering */
@@ -188,8 +194,11 @@ m_mode_handle_interrupt:
      */
     li t0, MTIMECMP0
     li t1, -1
-#ifdef CONFIG_64BIT
+#if defined(CONFIG_64BIT) && DT_REG_HAS_NAME(DT_INST(0, riscv_machine_timer), mtime)
     sd t1, 0(t0)
+#elif defined(CONFIG_64BIT)
+    sw t1, 4(t0)
+    sw t1, 0(t0)
 #else
     sw t1, 0(t0)
     sw t1, REGBYTES(t0)

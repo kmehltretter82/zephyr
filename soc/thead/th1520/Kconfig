@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleV-Ahead Zephyr Port
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_FAMILY_THEAD_TH1520
+	select INCLUDE_RESET_VECTOR
+	select RISCV
+	select RISCV_PRIVILEGED
+	select RISCV_SOC_HAS_GP_RELATIVE_ADDRESSING
+	select ATOMIC_OPERATIONS_BUILTIN
+	imply XIP

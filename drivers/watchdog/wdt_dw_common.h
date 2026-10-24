@@ -28,7 +28,7 @@ int dw_wdt_check_options(const uint8_t options);
  * @param config device configuration word
  * @return Error code, 0 on success.
  */
-int dw_wdt_configure(const uint32_t base, const uint32_t config);
+int dw_wdt_configure(const uintptr_t base, const uint32_t config);
 
 /**
  * @brief Calculate period
@@ -40,7 +40,7 @@ int dw_wdt_configure(const uint32_t base, const uint32_t config);
  *        placed
  * @return Error code, 0 on success.
  */
-int dw_wdt_calc_period(const uint32_t base, const uint32_t clk_freq,
+int dw_wdt_calc_period(const uintptr_t base, const uint32_t clk_freq,
 		       const struct wdt_timeout_cfg *config, uint32_t *period_out);
 
 /**
@@ -52,7 +52,7 @@ int dw_wdt_calc_period(const uint32_t base, const uint32_t clk_freq,
  * @param reset_pulse_length Length of a reset pulse produced by watchdog
  * @return Error code, 0 on success.
  */
-int dw_wdt_probe(const uint32_t base, const uint32_t reset_pulse_length);
+int dw_wdt_probe(const uintptr_t base, const uint32_t reset_pulse_length);
 
 /**
  * @brief Watchdog disable function

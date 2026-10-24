@@ -302,7 +302,7 @@
  *
  * @param base Device base address.
  */
-static inline void dw_wdt_enable(const uint32_t base)
+static inline void dw_wdt_enable(const uintptr_t base)
 {
 	uint32_t control = sys_read32(base + WDT_CR);
 
@@ -322,7 +322,7 @@ static inline void dw_wdt_enable(const uint32_t base)
  *		true = First generate an interrupt and even if it is cleared by the time a second
  *		       timeout occurs then generate a system reset
  */
-static inline void dw_wdt_response_mode_set(const uint32_t base, const bool mode)
+static inline void dw_wdt_response_mode_set(const uintptr_t base, const bool mode)
 {
 	uint32_t control = sys_read32(base + WDT_CR);
 
@@ -341,7 +341,7 @@ static inline void dw_wdt_response_mode_set(const uint32_t base, const bool mode
  * @param base Device base address.
  * @param pclk_cycles Reset pulse length selector (2 to 256 pclk cycles)
  */
-static inline void dw_wdt_reset_pulse_length_set(const uint32_t base, const uint32_t pclk_cycles)
+static inline void dw_wdt_reset_pulse_length_set(const uintptr_t base, const uint32_t pclk_cycles)
 {
 	uint32_t control = sys_read32(base + WDT_CR);
 
@@ -357,7 +357,7 @@ static inline void dw_wdt_reset_pulse_length_set(const uint32_t base, const uint
  * @param base Device base address.
  * @param timeout_period Timeout period value selector
  */
-static inline void dw_wdt_timeout_period_set(const uint32_t base, const uint32_t timeout_period)
+static inline void dw_wdt_timeout_period_set(const uintptr_t base, const uint32_t timeout_period)
 {
 	uint32_t timeout = sys_read32(base + WDT_TORR);
 
@@ -372,7 +372,7 @@ static inline void dw_wdt_timeout_period_set(const uint32_t base, const uint32_t
  * @param base Device base address.
  * @return Actual timeout period range
  */
-static inline uint32_t dw_wdt_timeout_period_get(const uint32_t base)
+static inline uint32_t dw_wdt_timeout_period_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_TORR_TOP, sys_read32(base + WDT_TORR));
 }
@@ -383,7 +383,7 @@ static inline uint32_t dw_wdt_timeout_period_get(const uint32_t base)
  * @param base Device base address.
  * @param timeout_period Timeout period value selector
  */
-static inline void dw_wdt_timeout_period_init_set(const uint32_t base,
+static inline void dw_wdt_timeout_period_init_set(const uintptr_t base,
 						  const uint32_t timeout_period)
 {
 	uint32_t timeout = sys_read32(base + WDT_TORR);
@@ -400,7 +400,7 @@ static inline void dw_wdt_timeout_period_init_set(const uint32_t base,
  * @param wdt_counter_width Watchdog Timer counter width
  * @return The current value of the internal counter
  */
-static inline uint32_t dw_wdt_current_counter_value_register_get(const uint32_t base,
+static inline uint32_t dw_wdt_current_counter_value_register_get(const uintptr_t base,
 								 uint32_t wdt_counter_width)
 {
 	uint32_t current_counter_value = sys_read32(base + WDT_CCVR);
@@ -416,7 +416,7 @@ static inline uint32_t dw_wdt_current_counter_value_register_get(const uint32_t 
  *
  * @param base Device base address.
  */
-static inline void dw_wdt_counter_restart(const uint32_t base)
+static inline void dw_wdt_counter_restart(const uintptr_t base)
 {
 	sys_write32(WDT_CRR_RESTART_KEY, base + WDT_CRR);
 }
@@ -428,7 +428,7 @@ static inline void dw_wdt_counter_restart(const uint32_t base)
  * @return 0x0 (INACTIVE): Interrupt is inactive,
  *	   0x1 (ACTIVE): Interrupt is active regardless of polarity
  */
-static inline uint32_t dw_wdt_interrupt_status_register_get(const uint32_t base)
+static inline uint32_t dw_wdt_interrupt_status_register_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_STAT) & 1;
 }
@@ -440,7 +440,7 @@ static inline uint32_t dw_wdt_interrupt_status_register_get(const uint32_t base)
  *
  * @param base Device base address.
  */
-static inline void dw_wdt_clear_interrupt(const uint32_t base)
+static inline void dw_wdt_clear_interrupt(const uintptr_t base)
 {
 	sys_read32(base + WDT_EOI);
 }
@@ -451,7 +451,7 @@ static inline void dw_wdt_clear_interrupt(const uint32_t base)
  * @param base Device base address.
  * @return Upper limit of Timeout Period parameters.
  */
-static inline uint32_t dw_wdt_user_top_max_get(const uint32_t base)
+static inline uint32_t dw_wdt_user_top_max_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_PARAM_5);
 }
@@ -462,7 +462,7 @@ static inline uint32_t dw_wdt_user_top_max_get(const uint32_t base)
  * @param base Device base address.
  * @return Upper limit of Initial Timeout Period parameters.
  */
-static inline uint32_t dw_wdt_user_top_init_max_get(const uint32_t base)
+static inline uint32_t dw_wdt_user_top_init_max_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_PARAM_4);
 }
@@ -473,7 +473,7 @@ static inline uint32_t dw_wdt_user_top_init_max_get(const uint32_t base)
  * @param base Device base address.
  * @return Default timeout range after reset
  */
-static inline uint32_t dw_wdt_timeout_period_rst_get(const uint32_t base)
+static inline uint32_t dw_wdt_timeout_period_rst_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_PARAM_3);
 }
@@ -484,7 +484,7 @@ static inline uint32_t dw_wdt_timeout_period_rst_get(const uint32_t base)
  * @param base Device base address.
  * @return Default timeout counter value
  */
-static inline uint32_t dw_wdt_cnt_rst_get(const uint32_t base)
+static inline uint32_t dw_wdt_cnt_rst_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_PARAM_2);
 }
@@ -495,9 +495,11 @@ static inline uint32_t dw_wdt_cnt_rst_get(const uint32_t base)
  * @param base Device base address.
  * @return Width of the counter register
  */
-static inline uint32_t dw_wdt_cnt_width_get(const uint32_t base)
+static inline uint32_t dw_wdt_cnt_width_get(const uintptr_t base)
 {
-	return FIELD_GET(WDT_CNT_WIDTH, sys_read32(base + WDT_COMP_PARAM_1)) + 16;
+	uint32_t width = FIELD_GET(WDT_CNT_WIDTH, sys_read32(base + WDT_COMP_PARAM_1));
+
+	return (width ? width : 16U) + 16U;
 }
 
 /**
@@ -509,7 +511,7 @@ static inline uint32_t dw_wdt_cnt_width_get(const uint32_t base)
  * @param base Device base address.
  * @return Initial timeout period
  */
-static inline uint32_t dw_wdt_dflt_timeout_period_init_get(const uint32_t base)
+static inline uint32_t dw_wdt_dflt_timeout_period_init_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_DFLT_TOP_INIT, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -524,7 +526,7 @@ static inline uint32_t dw_wdt_dflt_timeout_period_init_get(const uint32_t base)
  * @param base Device base address.
  * @return Default timeout period
  */
-static inline uint32_t dw_wdt_dflt_timeout_period_get(const uint32_t base)
+static inline uint32_t dw_wdt_dflt_timeout_period_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_DFLT_TOP, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -535,7 +537,7 @@ static inline uint32_t dw_wdt_dflt_timeout_period_get(const uint32_t base)
  * @param base Device base address.
  * @return Reset pulse length
  */
-static inline uint32_t dw_wdt_dflt_rpl_get(const uint32_t base)
+static inline uint32_t dw_wdt_dflt_rpl_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_DFLT_RPL, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -549,7 +551,7 @@ static inline uint32_t dw_wdt_dflt_rpl_get(const uint32_t base)
  *	   0x1 (APB_16BITS): APB data width is 16 bits
  *	   0x2 (APB_32BITS): APB data width is 32 bits
  */
-static inline uint32_t dw_wdt_apb_data_width_get(const uint32_t base)
+static inline uint32_t dw_wdt_apb_data_width_get(const uintptr_t base)
 {
 	return FIELD_GET(APB_DATA_WIDTH, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -564,7 +566,7 @@ static inline uint32_t dw_wdt_apb_data_width_get(const uint32_t base)
  * @return 0x0 (DISABLED): Pause enable signal is non existent
  *	   0x1 (ENABLED): Pause enable signal is included
  */
-static inline uint32_t dw_wdt_pause_get(const uint32_t base)
+static inline uint32_t dw_wdt_pause_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_PAUSE, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -580,7 +582,7 @@ static inline uint32_t dw_wdt_pause_get(const uint32_t base)
  * @return 0x0 (USERDEFINED): User must define timeout values
  *	   0x1 (PREDEFINED): Use predefined timeout values
  */
-static inline uint32_t dw_wdt_use_fix_timeout_period_get(const uint32_t base)
+static inline uint32_t dw_wdt_use_fix_timeout_period_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_USE_FIX_TOP, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -594,7 +596,7 @@ static inline uint32_t dw_wdt_use_fix_timeout_period_get(const uint32_t base)
  * @return 0x0 (PROGRAMMABLE): Timeout period is programmable
  *	   0x1 (HARDCODED): Timeout period is hard coded
  */
-static inline uint32_t dw_wdt_hc_timeout_period_get(const uint32_t base)
+static inline uint32_t dw_wdt_hc_timeout_period_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_HC_TOP, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -606,7 +608,7 @@ static inline uint32_t dw_wdt_hc_timeout_period_get(const uint32_t base)
  * @return 0x0 (PROGRAMMABLE): Reset pulse length is programmable
  *	   0x1 (HARDCODED): Reset pulse length is hardcoded
  */
-static inline uint32_t dw_wdt_hc_reset_pulse_length_get(const uint32_t base)
+static inline uint32_t dw_wdt_hc_reset_pulse_length_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_HC_RPL, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -618,7 +620,7 @@ static inline uint32_t dw_wdt_hc_reset_pulse_length_get(const uint32_t base)
  * @return 0x0 (PROGRAMMABLE): Output response mode is programmable
  *	   0x1 (HARDCODED): Output response mode is hard coded
  */
-static inline uint32_t dw_wdt_hc_response_mode_get(const uint32_t base)
+static inline uint32_t dw_wdt_hc_response_mode_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_HC_RMOD, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -633,7 +635,7 @@ static inline uint32_t dw_wdt_hc_response_mode_get(const uint32_t base)
  * @return 0x0 (DISABLED): Second timeout period is not present
  *	   0x1 (ENABLED): Second timeout period is present
  */
-static inline uint32_t dw_wdt_dual_timeout_period_get(const uint32_t base)
+static inline uint32_t dw_wdt_dual_timeout_period_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_DUAL_TOP, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -650,7 +652,7 @@ static inline uint32_t dw_wdt_dual_timeout_period_get(const uint32_t base)
  * @return 0x0 (DISABLED): System reset only
  *	   0x1 (ENABLED): Interrupt and system reset
  */
-static inline uint32_t dw_wdt_dflt_response_mode_get(const uint32_t base)
+static inline uint32_t dw_wdt_dflt_response_mode_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_DFLT_RMOD, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -665,7 +667,7 @@ static inline uint32_t dw_wdt_dflt_response_mode_get(const uint32_t base)
  * @return 0x0 (DISABLED): Watchdog timer disabled on reset
  *	   0x1 (ENABLED): Watchdog timer enabled on reset
  */
-static inline uint32_t dw_wdt_always_en_get(const uint32_t base)
+static inline uint32_t dw_wdt_always_en_get(const uintptr_t base)
 {
 	return FIELD_GET(WDT_ALWAYS_EN, sys_read32(base + WDT_COMP_PARAM_1));
 }
@@ -678,7 +680,7 @@ static inline uint32_t dw_wdt_always_en_get(const uint32_t base)
  * @param base Device base address.
  * @return Component version code
  */
-static inline uint32_t dw_wdt_comp_version_get(const uint32_t base)
+static inline uint32_t dw_wdt_comp_version_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_VERSION);
 }
@@ -689,7 +691,7 @@ static inline uint32_t dw_wdt_comp_version_get(const uint32_t base)
  * @param base Device base address.
  * @return Components type code
  */
-static inline uint32_t dw_wdt_comp_type_get(const uint32_t base)
+static inline uint32_t dw_wdt_comp_type_get(const uintptr_t base)
 {
 	return sys_read32(base + WDT_COMP_TYPE);
 }

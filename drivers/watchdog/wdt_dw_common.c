@@ -30,7 +30,7 @@ int dw_wdt_check_options(const uint8_t options)
 	return 0;
 }
 
-int dw_wdt_configure(const uint32_t base, const uint32_t config)
+int dw_wdt_configure(const uintptr_t base, const uint32_t config)
 {
 	uint32_t period;
 
@@ -42,10 +42,7 @@ int dw_wdt_configure(const uint32_t base, const uint32_t config)
 	/* Configure timeout */
 	period = config & ~WDT_DW_FLAG_CONFIGURED;
 
-	if (dw_wdt_dual_timeout_period_get(base)) {
-		dw_wdt_timeout_period_init_set(base, period);
-	}
-
+	dw_wdt_timeout_period_init_set(base, period);
 	dw_wdt_timeout_period_set(base, period);
 
 	/* Enable watchdog */
@@ -55,7 +52,7 @@ int dw_wdt_configure(const uint32_t base, const uint32_t config)
 	return 0;
 }
 
-int dw_wdt_calc_period(const uint32_t base, const uint32_t clk_freq,
+int dw_wdt_calc_period(const uintptr_t base, const uint32_t clk_freq,
 		       const struct wdt_timeout_cfg *config, uint32_t *period_out)
 {
 	uint64_t period64;
@@ -87,7 +84,7 @@ int dw_wdt_calc_period(const uint32_t base, const uint32_t clk_freq,
 	return 0;
 }
 
-int dw_wdt_probe(const uint32_t base, const uint32_t reset_pulse_length)
+int dw_wdt_probe(const uintptr_t base, const uint32_t reset_pulse_length)
 {
 	/* Check component type */
 	const uint32_t type = dw_wdt_comp_type_get(base);

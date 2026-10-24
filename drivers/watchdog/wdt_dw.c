@@ -65,10 +65,10 @@ static int dw_wdt_setup(const struct device *dev, uint8_t options)
 
 #if DT_ANY_INST_HAS_PROP_STATUS_OKAY(interrupts)
 	/* Configure response mode */
-	dw_wdt_response_mode_set((uint32_t)reg_base, !!dev_data->callback);
+	dw_wdt_response_mode_set(reg_base, !!dev_data->callback);
 #endif
 
-	return dw_wdt_configure((uint32_t)reg_base, dev_data->config);
+	return dw_wdt_configure(reg_base, dev_data->config);
 }
 
 static int dw_wdt_install_timeout(const struct device *dev, const struct wdt_timeout_cfg *config)
@@ -99,7 +99,7 @@ static int dw_wdt_install_timeout(const struct device *dev, const struct wdt_tim
 	dev_data->callback = config->callback;
 #endif
 
-	return dw_wdt_calc_period((uint32_t)reg_base, dev_data->clk_freq, config,
+	return dw_wdt_calc_period(reg_base, dev_data->clk_freq, config,
 				  &dev_data->config);
 }
 
@@ -112,7 +112,7 @@ static int dw_wdt_feed(const struct device *dev, int channel_id)
 		return -EINVAL;
 	}
 
-	dw_wdt_counter_restart((uint32_t)reg_base);
+	dw_wdt_counter_restart(reg_base);
 
 	return 0;
 }
@@ -186,7 +186,7 @@ static int dw_wdt_init(const struct device *dev)
 		return ret;
 	}
 #endif
-	ret = dw_wdt_probe((uint32_t)reg_base, dev_config->reset_pulse_length);
+	ret = dw_wdt_probe(reg_base, dev_config->reset_pulse_length);
 	if (ret) {
 		return ret;
 	}
@@ -206,7 +206,7 @@ static void dw_wdt_isr(const struct device *dev)
 	struct dw_wdt_dev_data *const dev_data = dev->data;
 	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 
-	if (dw_wdt_interrupt_status_register_get((uint32_t)reg_base)) {
+	if (dw_wdt_interrupt_status_register_get(reg_base)) {
 
 		/*
 		 * Clearing interrupt here will not assert system reset, so interrupt

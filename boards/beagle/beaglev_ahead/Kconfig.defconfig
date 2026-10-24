@@ -1,0 +1,18 @@
+# Copyright (c) 2026 BeagleV-Ahead Zephyr Port
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_BEAGLEV_AHEAD
+
+config BUILD_OUTPUT_BIN
+	default y
+
+config QEMU_ICOUNT
+	default n
+
+configdefault PRIVILEGED_STACK_SIZE
+	default 2048
+
+configdefault IDLE_STACK_SIZE
+	default 1024 if SMP
+
+endif # BOARD_BEAGLEV_AHEAD

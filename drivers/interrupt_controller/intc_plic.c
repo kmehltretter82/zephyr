@@ -915,16 +915,18 @@ SHELL_CMD_REGISTER(plic, &plic_cmds, "PLIC shell commands", NULL);
 		PLIC_IRQ_CPUMASK_BUF_INIT(n)                                                       \
 	};
 
+#define PLIC_IRQN(n) COND_CODE_1(CONFIG_RISCV_S_MODE, (RISCV_IRQ_SEXT), (DT_INST_IRQN(n)))
+
 #define PLIC_INTC_IRQ_FUNC_DECLARE(n) static void plic_irq_config_func_##n(void)
 
 #define PLIC_INTC_IRQ_FUNC_DEFINE(n)                                                               \
 	static void plic_irq_config_func_##n(void)                                                 \
 	{                                                                                          \
-		IRQ_CONNECT(DT_INST_IRQN(n), 0, plic_irq_handler, DEVICE_DT_INST_GET(n), 0);       \
-		irq_enable(DT_INST_IRQN(n));                                                       \
+		IRQ_CONNECT(PLIC_IRQN(n), 0, plic_irq_handler, DEVICE_DT_INST_GET(n), 0);          \
+		irq_enable(PLIC_IRQN(n));                                                          \
 	}
 
-#define HART_CONTEXTS(i, n) IF_ENABLED(IS_EQ(DT_INST_IRQN_BY_IDX(n, i), DT_INST_IRQN(n)), (i,))
+#define HART_CONTEXTS(i, n) IF_ENABLED(IS_EQ(DT_INST_IRQN_BY_IDX(n, i), PLIC_IRQN(n)), (i,))
 #define PLIC_HART_CONTEXT_DECLARE(n)                                                               \
 	INTC_PLIC_STATIC const uint32_t plic_hart_contexts_##n[DT_CHILD_NUM(DT_PATH(cpus))] = {    \
 		LISTIFY(DT_INST_NUM_IRQS(n), HART_CONTEXTS, (), n)}
@@ -943,7 +945,7 @@ SHELL_CMD_REGISTER(plic, &plic_cmds, "PLIC shell commands", NULL);
 		.max_prio = DT_INST_PROP(n, riscv_max_priority),                                   \
 		.riscv_ndev = DT_INST_PROP(n, riscv_ndev),                                         \
 		.nr_irqs = PLIC_MIN_IRQ_NUM(n),                                                    \
-		.irq = DT_INST_IRQN(n),                                                            \
+		.irq = PLIC_IRQN(n),                                                               \
 		.irq_config_func = plic_irq_config_func_##n,                                       \
 		.isr_table = &_sw_isr_table[INTC_INST_ISR_TBL_OFFSET(n)],                          \
 		.hart_context = plic_hart_contexts_##n,                                            \

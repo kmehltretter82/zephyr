@@ -1,0 +1,8 @@
+# Copyright (c) 2026 BeagleV-Ahead Zephyr Port
+# SPDX-License-Identifier: Apache-2.0
+
+description: T-Head XuanTie C910 64-bit RISC-V CPU
+
+compatible: "thead,c910"
+
+include: riscv-common.yaml

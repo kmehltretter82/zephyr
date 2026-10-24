@@ -165,6 +165,7 @@ aa_loop:
 	li t0, (MIP_SSIP | MIP_STIP | MIP_SEIP)
 	csrw mideleg, t0
 
+#if CONFIG_PMP_SLOTS > 0
 	/* PMP entry 0: NAPOT, RWX, covers all memory so S-mode can
 	* access everything
 	*/
@@ -172,6 +173,7 @@ aa_loop:
 	csrw pmpaddr0, t0
 	li t0, (PMP_NAPOT | PMP_R | PMP_W | PMP_X)
 	csrw pmpcfg0, t0
+#endif
 
 	/* Initialize mscratch to M-mode stack top */
 	la t0, m_mode_stack_top
@@ -190,6 +192,13 @@ aa_loop:
 	/* Enable M-mode timer interrupt so MTIP fires and is forwarded to S-mode as STIP */
 	li t0, MIP_MTIP
 	csrs mie, t0
+
+#ifdef CONFIG_SOC_TH1520
+	/* Delegate T-Head C900 PLIC priority registers to S-mode (PLIC_CTRL = 1) */
+	li t0, 0xffd81ffffc
+	li t1, 1
+	sw t1, 0(t0)
+#endif
 
 	/* Set MPP=S-mode in mstatus then mret into S-mode */
 	li t0, MSTATUS_MPP

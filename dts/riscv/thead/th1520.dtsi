@@ -1,0 +1,467 @@
+/*
+ * Copyright (c) 2026 BeagleV-Ahead Zephyr Port
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <mem.h>
+#include <freq.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	compatible = "thead,th1520";
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <3000000>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "thead,c910", "riscv";
+			reg = <0>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c",
+					       "zicsr", "zifencei", "zicntr",
+					       "xtheadba", "xtheadbb", "xtheadbs",
+					       "xtheadcmo";
+			riscv,privilege-modes = "m", "s", "u";
+			d-cache-line-size = <64>;
+			i-cache-line-size = <64>;
+			status = "okay";
+
+			cpu0_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			compatible = "thead,c910", "riscv";
+			reg = <1>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c",
+					       "zicsr", "zifencei", "zicntr",
+					       "xtheadba", "xtheadbb", "xtheadbs",
+					       "xtheadcmo";
+			riscv,privilege-modes = "m", "s", "u";
+			d-cache-line-size = <64>;
+			i-cache-line-size = <64>;
+			status = "okay";
+
+			cpu1_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu2: cpu@2 {
+			device_type = "cpu";
+			compatible = "thead,c910", "riscv";
+			reg = <2>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c",
+					       "zicsr", "zifencei", "zicntr",
+					       "xtheadba", "xtheadbb", "xtheadbs",
+					       "xtheadcmo";
+			riscv,privilege-modes = "m", "s", "u";
+			d-cache-line-size = <64>;
+			i-cache-line-size = <64>;
+			status = "okay";
+
+			cpu2_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu3: cpu@3 {
+			device_type = "cpu";
+			compatible = "thead,c910", "riscv";
+			reg = <3>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c",
+					       "zicsr", "zifencei", "zicntr",
+					       "xtheadba", "xtheadbb", "xtheadbs",
+					       "xtheadcmo";
+			riscv,privilege-modes = "m", "s", "u";
+			d-cache-line-size = <64>;
+			i-cache-line-size = <64>;
+			status = "okay";
+
+			cpu3_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+
+		sram0: memory@ffe0000000 {
+			compatible = "mmio-sram";
+			reg = <0xff 0xe0000000 0x0 DT_SIZE_K(1536)>;
+		};
+
+		dram0: memory@200000 {
+			device_type = "memory";
+			reg = <0x0 0x00200000 0x0 DT_SIZE_M(254)>;
+		};
+
+		clint: clint@ffdc000000 {
+			compatible = "sifive,clint0";
+			reg = <0xff 0xdc000000 0x0 0x00010000>;
+			interrupts-extended = <&cpu0_intc 3>, <&cpu0_intc 7>,
+					      <&cpu1_intc 3>, <&cpu1_intc 7>,
+					      <&cpu2_intc 3>, <&cpu2_intc 7>,
+					      <&cpu3_intc 3>, <&cpu3_intc 7>;
+		};
+
+		mtimer: timer@ffdc004000 {
+			compatible = "riscv,machine-timer";
+			reg = <0xff 0xdc004000 0x0 0x00002000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu0_intc 7>, <&cpu1_intc 7>,
+					      <&cpu2_intc 7>, <&cpu3_intc 7>;
+		};
+
+		plic: interrupt-controller@ffd8000000 {
+			compatible = "sifive,plic-1.0.0", "riscv,plic0";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			reg = <0xff 0xd8000000 0x0 0x00200000
+			       0xff 0xd8001000 0x0 0x00001000
+			       0xff 0xd8002000 0x0 0x001fe000
+			       0xff 0xd8200000 0x0 0x00e00000>;
+			reg-names = "prio", "irq_p", "irq_en", "reg";
+			riscv,max-priority = <31>;
+			riscv,ndev = <240>;
+			interrupts-extended = <&cpu0_intc 11>, <&cpu0_intc 9>,
+					      <&cpu1_intc 11>, <&cpu1_intc 9>,
+					      <&cpu2_intc 11>, <&cpu2_intc 9>,
+					      <&cpu3_intc 11>, <&cpu3_intc 9>;
+		};
+
+		uart0: serial@ffe7014000 {
+			compatible = "ns16550";
+			reg = <0xff 0xe7014000 0x0 0x100>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <36 1>;
+			status = "disabled";
+		};
+
+		uart1: serial@ffe7f00000 {
+			compatible = "ns16550";
+			reg = <0xff 0xe7f00000 0x0 0x100>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <37 1>;
+			status = "disabled";
+		};
+
+		uart2: serial@ffec010000 {
+			compatible = "ns16550";
+			reg = <0xff 0xec010000 0x0 0x4000>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <38 1>;
+			status = "disabled";
+		};
+
+		uart3: serial@ffe7f04000 {
+			compatible = "ns16550";
+			reg = <0xff 0xe7f04000 0x0 0x100>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <39 1>;
+			status = "disabled";
+		};
+
+		uart4: serial@fff7f08000 {
+			compatible = "ns16550";
+			reg = <0xff 0xf7f08000 0x0 0x4000>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <40 1>;
+			status = "disabled";
+		};
+
+		uart5: serial@fff7f0c000 {
+			compatible = "ns16550";
+			reg = <0xff 0xf7f0c000 0x0 0x4000>;
+			reg-shift = <2>;
+			clock-frequency = <100000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <41 1>;
+			status = "disabled";
+		};
+
+		gpio0: gpio@ffec005000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xec005000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <56 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <32>;
+			status = "disabled";
+		};
+
+		gpio1: gpio@ffec006000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xec006000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <57 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <31>;
+			status = "disabled";
+		};
+
+		gpio2: gpio@ffe7f34000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xe7f34000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <58 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <32>;
+			status = "disabled";
+		};
+
+		gpio3: gpio@ffe7f38000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xe7f38000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <59 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <23>;
+			status = "disabled";
+		};
+
+		gpio4: gpio@fffff52000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xfff52000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <55 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <23>;
+			status = "disabled";
+		};
+
+		aogpio: gpio@fffff41000 {
+			compatible = "snps,designware-gpio";
+			reg = <0xff 0xfff41000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <76 1>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <16>;
+			status = "disabled";
+		};
+
+		i2c0: i2c@ffe7f20000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xe7f20000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <44 1>;
+			status = "disabled";
+		};
+
+		i2c1: i2c@ffe7f24000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xe7f24000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <45 1>;
+			status = "disabled";
+		};
+
+		i2c2: i2c@ffec00c000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xec00c000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <46 1>;
+			status = "disabled";
+		};
+
+		i2c3: i2c@ffec014000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xec014000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <47 1>;
+			status = "disabled";
+		};
+
+		i2c4: i2c@ffe7f28000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xe7f28000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <48 1>;
+			status = "disabled";
+		};
+
+		i2c5: i2c@fff7f2c000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xf7f2c000 0x0 0x4000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <49 1>;
+			status = "disabled";
+		};
+
+		aon_i2c: i2c@fffff4c000 {
+			compatible = "snps,designware-i2c";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xfff4c000 0x0 0x1000>;
+			clock-frequency = <I2C_BITRATE_FAST>;
+			interrupt-parent = <&plic>;
+			interrupts = <79 1>;
+			status = "disabled";
+		};
+
+		spi0: spi@ffe700c000 {
+			compatible = "snps,designware-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xff 0xe700c000 0x0 0x1000>;
+			clock-frequency = <125000000>;
+			fifo-depth = <32>;
+			max-xfer-size = <32>;
+			interrupt-parent = <&plic>;
+			interrupts = <54 1>;
+			status = "disabled";
+		};
+
+		timer0: timer@ffefc32000 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xefc32000 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <16 1>;
+			status = "disabled";
+		};
+
+		timer1: timer@ffefc32014 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xefc32014 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <17 1>;
+			status = "disabled";
+		};
+
+		timer2: timer@ffefc32028 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xefc32028 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <18 1>;
+			status = "disabled";
+		};
+
+		timer3: timer@ffefc3203c {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xefc3203c 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <19 1>;
+			status = "disabled";
+		};
+
+		timer4: timer@ffffc33000 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xffc33000 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <20 1>;
+			status = "disabled";
+		};
+
+		timer5: timer@ffffc33014 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xffc33014 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <21 1>;
+			status = "disabled";
+		};
+
+		timer6: timer@ffffc33028 {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xffc33028 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <22 1>;
+			status = "disabled";
+		};
+
+		timer7: timer@ffffc3303c {
+			compatible = "snps,dw-timers";
+			reg = <0xff 0xffc3303c 0x0 0x14>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <23 1>;
+			status = "disabled";
+		};
+
+		wdt0: watchdog@ffefc30000 {
+			compatible = "snps,designware-watchdog";
+			reg = <0xff 0xefc30000 0x0 0x1000>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <24 1>;
+			status = "disabled";
+		};
+
+		wdt1: watchdog@ffefc31000 {
+			compatible = "snps,designware-watchdog";
+			reg = <0xff 0xefc31000 0x0 0x1000>;
+			clock-frequency = <125000000>;
+			interrupt-parent = <&plic>;
+			interrupts = <25 1>;
+			status = "disabled";
+		};
+	};
+};

@@ -481,11 +481,8 @@ static int i2c_dw_data_send(const struct device *dev)
 		dw->xfr_len--;
 		dw->xfr_buf++;
 
-		if (test_bit_intr_stat_tx_abrt(reg_base)) {
-			return -EIO;
-		}
-
-		if (i2c_dw_error_chk(dev)) {
+		if (i2c_dw_error_chk(dev) || test_bit_intr_stat_tx_abrt(reg_base)) {
+			dw->state |= I2C_DW_CMD_ERROR;
 			return -EIO;
 		}
 	}
@@ -595,11 +592,16 @@ static void i2c_dw_isr(const struct device *port)
 				i2c_dw_data_ask(port);
 			}
 
+			if (ret != 0) {
+				dw->state |= I2C_DW_CMD_ERROR;
+				(void)read_clr_tx_abrt(reg_base);
+				goto done;
+			}
+
 			/* If STOP is not expected, finish processing this
 			 * message if there is nothing left to do anymore.
 			 */
-			if (((dw->xfr_len == 0U) && !(dw->xfr_flags & I2C_MSG_STOP)) ||
-			    (ret != 0)) {
+			if ((dw->xfr_len == 0U) && !(dw->xfr_flags & I2C_MSG_STOP)) {
 				goto done;
 			}
 		}
