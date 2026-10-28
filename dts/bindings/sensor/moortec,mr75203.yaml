@@ -1,0 +1,13 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+description: Moortec MR75203 Process, Voltage, and Temperature (PVT) Sensor
+
+compatible: "moortec,mr75203"
+
+include: [sensor-device.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+    description: Common, TS, PD, and VM register windows

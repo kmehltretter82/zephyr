@@ -8,6 +8,8 @@
 
 #include <thead/th1520.dtsi>
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/pinctrl/th1520-pinctrl.h>
 
 / {
 	model = "BeagleBoard.org BeagleV-Ahead";
@@ -16,6 +18,8 @@
 	chosen {
 		zephyr,console = &uart0;
 		zephyr,shell-uart = &uart0;
+		zephyr,bt-hci = &bt_hci_uart;
+		zephyr,canbus = &mcp2518fd;
 		zephyr,sram = &dram0;
 	};
 
@@ -27,6 +31,8 @@
 		led4 = &usr_led4;
 		eeprom-0 = &eeprom0;
 		watchdog0 = &wdt0;
+		pwm-0 = &pwm0;
+		rtc = &rtc0;
 	};
 
 	leds {
@@ -78,14 +84,85 @@
 	};
 };
 
+&padctrl_aosys {
+	status = "okay";
+};
+
+&padctrl0_apsys {
+	status = "okay";
+
+	i2c3_scl_default: i2c3_scl_default {
+		pinmux = <TH1520_PINMUX(11, TH1520_MUX_FUNC1, 0)>;
+		bias-pull-up;
+		input-enable;
+		drive-strength = <8>;
+	};
+
+	i2c3_sda_default: i2c3_sda_default {
+		pinmux = <TH1520_PINMUX(12, TH1520_MUX_FUNC1, 0)>;
+		bias-pull-up;
+		input-enable;
+		drive-strength = <8>;
+	};
+
+	pwm0_ch0_default: pwm0_ch0_default {
+		pinmux = <TH1520_PINMUX(3, TH1520_MUX_FUNC1, 0)>;
+		drive-strength = <12>;
+	};
+};
+
+&padctrl1_apsys {
+	status = "okay";
+
+	uart0_tx_default: uart0_tx_default {
+		pinmux = <TH1520_PINMUX(0, TH1520_MUX_FUNC0, 0)>;
+		drive-strength = <8>;
+	};
+
+	uart0_rx_default: uart0_rx_default {
+		pinmux = <TH1520_PINMUX(1, TH1520_MUX_FUNC0, 0)>;
+		bias-pull-up;
+		input-enable;
+		drive-strength = <8>;
+	};
+
+	spi0_sck_default: spi0_sck_default {
+		pinmux = <TH1520_PINMUX(16, TH1520_MUX_FUNC0, 0)>;
+		drive-strength = <10>;
+	};
+
+	spi0_mosi_default: spi0_mosi_default {
+		pinmux = <TH1520_PINMUX(17, TH1520_MUX_FUNC0, 0)>;
+		drive-strength = <10>;
+	};
+
+	spi0_miso_default: spi0_miso_default {
+		pinmux = <TH1520_PINMUX(18, TH1520_MUX_FUNC0, 0)>;
+		bias-pull-up;
+		input-enable;
+		drive-strength = <10>;
+	};
+};
+
 &uart0 {
 	status = "okay";
 	current-speed = <115200>;
+	pinctrl-0 = <&uart0_tx_default &uart0_rx_default>;
+	pinctrl-names = "default";
 };
 
 mikrobus_serial: &uart3 {
 	status = "okay";
 	current-speed = <115200>;
+};
+
+&uart4 {
+	status = "okay";
+	current-speed = <115200>;
+
+	bt_hci_uart: bt_hci_uart {
+		compatible = "zephyr,bt-hci-uart";
+	};
 };
 
 &gpio0 {
@@ -127,6 +204,11 @@ mikrobus_serial: &uart3 {
 
 mikrobus_i2c: &i2c3 {
 	status = "okay";
+
+	bme280: bme280@76 {
+		compatible = "bosch,bme280";
+		reg = <0x76>;
+	};
 };
 
 &aon_i2c {
@@ -134,6 +216,45 @@ mikrobus_i2c: &i2c3 {
 };
 
 mikrobus_spi: &spi0 {
+	status = "okay";
+	cs-gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
+
+	mcp2518fd: can@0 {
+		compatible = "microchip,mcp251xfd";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		osc-freq = <40000000>;
+		int-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&pwm0_ch0_default>;
+	pinctrl-names = "default";
+};
+
+&pvt0 {
+	status = "okay";
+};
+
+&rtc0 {
+	status = "okay";
+};
+
+&dmac0 {
+	status = "okay";
+};
+
+&mbox0 {
+	status = "okay";
+};
+
+&gmac0 {
+	status = "okay";
+};
+
+&mshc0 {
 	status = "okay";
 };
 

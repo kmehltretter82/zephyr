@@ -74,9 +74,8 @@ out:
 	if (!spi_dw_is_peripheral(spi)) {
 		if (spi_cs_is_gpio(ctx->config)) {
 			spi_context_cs_control(ctx, false);
-		} else {
-			write_ser(dev, 0);
 		}
+		write_ser(dev, 0);
 	}
 
 	LOG_DBG("SPI transaction completed %s error",
@@ -456,12 +455,11 @@ static int transceive(const struct device *dev,
 	write_imr(dev, reg_data);
 
 	if (!spi_dw_is_peripheral(spi)) {
-		/* if cs is not defined as gpio, use hw cs */
+		/* if cs is defined as gpio, assert it alongside SER */
 		if (spi_cs_is_gpio(config)) {
 			spi_context_cs_control(&spi->ctx, true);
-		} else {
-			write_ser(dev, BIT(config->peripheral));
 		}
+		write_ser(dev, BIT(config->peripheral));
 	}
 
 	LOG_DBG("Enabling controller");

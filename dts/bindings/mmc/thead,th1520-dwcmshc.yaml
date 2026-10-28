@@ -1,0 +1,20 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+description: T-Head TH1520 Synopsys DesignWare Mobile Storage Host Controller (DWC MSHC eMMC/SDHCI)
+
+compatible: "thead,th1520-dwcmshc"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  disk-name:
+    type: string
+    default: "EMMC"
+    description: Disk name registered with Zephyr disk_access subsystem

@@ -1,254 +1,164 @@
 # BeagleV-Ahead (T-Head TH1520) — Zephyr RTOS Port & QEMU Emulation Guide
 
-This document describes the complete **Zephyr RTOS** SoC (`th1520`) and board (`beaglev_ahead`) support package for the **BeagleV-Ahead** (powered by the quad-core 64-bit RISC-V **T-Head TH1520 / XuanTie C910** SoC), along with the fixes and enhancements made to the **BeagleV-Ahead QEMU fork** (`qemu-th1520`) and Zephyr drivers.
+This document describes the complete **Zephyr RTOS** SoC (`th1520`) and board (`beaglev_ahead`) support package for the **BeagleV-Ahead** (powered by the quad-core 64-bit RISC-V **T-Head TH1520 / XuanTie C910** SoC), along with the peripheral drivers, upper-layer stacks, MikroBUS Click board models, and AMP/SRAM targets across **Tracks 1–4** verified against the **BeagleV-Ahead QEMU fork** (`qemu-th1520`).
 
 ---
 
-## 1. Supported Board Targets (5 Configurations)
+## 1. Supported Board Targets (6 Configurations)
 
-All 5 Zephyr execution modes are implemented and verified on `qemu-system-riscv64 -machine beaglev-ahead`:
+All 6 Zephyr execution modes are implemented and verified on `qemu-system-riscv64 -machine beaglev-ahead`:
 
-| Board Target | Privilege Mode | Cores | Memory Origin | Boot Method | QEMU `-bios` Flag |
+| Board Target | Privilege Mode | Cores | Memory Origin | Boot Method | QEMU Flag |
 |---|---|---|---|---|---|
-| `beaglev_ahead/th1520` | M-mode | 1 (`hart0`) | `0x00000000` (4 GiB DRAM) | Direct M-mode entry | `-bios none` |
-| `beaglev_ahead/th1520/smp` | M-mode SMP | 4 (`hart0..3`) | `0x00000000` (4 GiB DRAM) | Direct M-mode 4-core SMP | `-bios none` |
-| `beaglev_ahead/th1520/smode` | M+S Internal SBI | 1 (`hart0`) | `0x00000000` (4 GiB DRAM) | Zephyr internal M-mode SBI stub -> S-mode kernel | `-bios none` |
-| `beaglev_ahead/th1520/opensbi` | S-mode (OpenSBI) | 1 (`hart0`) | `0x00200000` (DRAM + 2 MiB) | External OpenSBI (`fw_dynamic.bin`) -> S-mode | `-bios default` |
-| `beaglev_ahead/th1520/opensbi_smp` | S-mode SMP (OpenSBI) | 4 (`hart0..3`) | `0x00200000` (DRAM + 2 MiB) | External OpenSBI (`fw_dynamic.bin`) -> 4-core S-mode SMP (`SBI_EXT_HSM`) | `-bios default` |
+| `beaglev_ahead/th1520` | M-mode | 1 (`hart0`) | `0x00200000` (DRAM) | Direct M-mode entry | `-bios <zephyr.elf>` |
+| `beaglev_ahead/th1520/smp` | M-mode SMP | 4 (`hart0..3`) | `0x00200000` (DRAM) | Direct M-mode 4-core SMP | `-bios <zephyr.elf>` |
+| `beaglev_ahead/th1520/smode` | M+S Internal SBI | 1 (`hart0`) | `0x00200000` (DRAM) | Zephyr internal M-mode SBI stub -> S-mode kernel | `-bios <zephyr.elf>` |
+| `beaglev_ahead/th1520/opensbi` | S-mode (OpenSBI) | 1 (`hart0`) | `0x00200000` (DRAM + 2 MiB) | External OpenSBI -> S-mode | `-kernel <zephyr.elf>` |
+| `beaglev_ahead/th1520/opensbi_smp` | S-mode SMP (OpenSBI) | 4 (`hart0..3`) | `0x00200000` (DRAM + 2 MiB) | External OpenSBI -> 4-core S-mode SMP (`SBI_EXT_HSM`) | `-kernel <zephyr.elf>` |
+| `beaglev_ahead/th1520/sram` | M-mode (On-Chip SRAM) | 1 (`hart0` / AMP) | `0xffe0000000` (1.5 MiB SRAM) | Zero-DRAM execution out of On-Chip SRAM + AMP Shared-Memory IPC | `-bios <zephyr.elf>` |
 
 ---
 
-## 2. Emulated & Verified Hardware Subsystems
+## 2. Emulated & Verified Hardware Subsystems (18/18 Passing)
 
 Every peripheral below is wired in the Zephyr devicetree (`dts/riscv/thead/th1520.dtsi` and `boards/beagle/beaglev_ahead/beaglev_ahead.dts`) and verified end-to-end against `qemu-th1520`:
 
-| Subsystem | Zephyr Compatible / Driver | MMIO Base | PLIC IRQ | BeagleV-Ahead Function |
-|---|---|---|---|---|
-| **CPUs (`cpu0..cpu3`)** | `thead,c910`, `riscv` | — | — | 4x 64-bit XuanTie C910 (`rv64imafdc_zicsr_zifencei`) + T-Head CSRs (`CSR_TH_MXSTATUS`, `CSR_TH_SXSTATUS`, `CSR_TH_CPUID`) |
-| **CLINT** | `thead,c900-clint`, `riscv,clint0` (`riscv_machine_timer`) | `0xffdc000000` | — | 3 MHz system timer (`csr_read(time)` + 32-bit split `mtimecmp`) & M-mode IPI (`msip`) |
-| **PLIC** | `thead,c900-plic`, `sifive,plic-1.0.0` (`intc_plic`) | `0xffd8000000` | — | 240 interrupt sources, 8 hart contexts (M/S for harts 0..3), `PLIC_CTRL` (`0xffd81ffffc`) |
-| **UART0..UART5** | `snps,dw-apb-uart` (`uart_ns16550`) | `0xffe7014000` (`uart0`)<br>`0xffe7f0c000` (`uart3`) | `36` (`uart0`)<br>`39` (`uart3`) | `uart0`: Debug console (`115200 8N1`, interrupt-driven)<br>`uart3`: `mikrobus_serial` |
-| **GPIO0..GPIO4, AOGPIO** | `snps,dw-apb-gpio` (`gpio_dw`) | `0xffec005000`..`0xfff7f1c000` | `52`..`55`, `158` | `gpio4` pins `8..12`: Onboard 5x User LEDs (`led0..led4` / `USR0..USR4`)<br>`gpio2`: AP6203BM Wi-Fi/BT control lines<br>`mikrobus_header`: MikroBUS GPIO nexus |
-| **I2C0..I2C5, AON_I2C** | `snps,designware-i2c` (`i2c_dw`) | `0xffe7f20000` (`i2c0`)<br>`0xffe7f28000` (`i2c3`)<br>`0xfffff4c000` (`aon_i2c`) | `42` (`i2c0`)<br>`45` (`i2c3`)<br>`160` (`aon_i2c`) | `i2c0`: Onboard 4 KiB AT24C32 EEPROM at `0x50` (`atmel,at24`)<br>`i2c3`: `mikrobus_i2c`<br>`aon_i2c`: Onboard Dialog DA9063 PMIC at `0x5a` |
-| **SPI0** | `snps,designware-spi` (`spi_dw`) | `0xffe700c000` | `50` | `mikrobus_spi` (full-duplex SSI master with CS GPIO `gpio2` pin 15) |
-| **TIMER0..TIMER7** | `snps,dw-timers` (`counter_dw`) | `0xffefc32000` (`timer0`..`3`)<br>`0xfff7f20000` (`timer4`..`7`) | `64`..`71` | 8x DesignWare 32-bit countdown timers with alarm IRQ callbacks |
-| **WDT0, WDT1** | `snps,designware-watchdog` (`wdt_dw`) | `0xffefc30000` (`wdt0`)<br>`0xffefc31000` (`wdt1`) | `72`, `73` | 2x DesignWare hardware watchdogs (`TOP`/`TOP_INIT`, `CRR` kick `0x76`, `EOI`) |
+| # | Track | Subsystem | Zephyr Compatible / Driver | MMIO Base | PLIC IRQ | BeagleV-Ahead Function |
+|---|---|---|---|---|---|---|
+| 1 | Base | **CPUs (`cpu0..cpu3`) & CLINT** | `thead,c910` + `thead,c900-clint` (`riscv_machine_timer`) | `0xffdc000000` | — | 4x 64-bit XuanTie C910 + T-Head CSRs (`mxstatus`, `mhcr`, `mhint`, `mcpuid`) + 3 MHz CLINT |
+| 2 | Base | **PLIC & UART0..UART5** | `thead,c900-plic` (`intc_plic`) + `ns16550` (`uart_ns16550`) | `0xffd8000000` (PLIC)<br>`0xffe7014000` (`uart0`)<br>`0xffe7f04000` (`uart3`)<br>`0xfff7f08000` (`uart4`) | `36` (`uart0`)<br>`39` (`uart3`)<br>`40` (`uart4`) | `uart0`: Console<br>`uart3`: `mikrobus_serial`<br>`uart4`: AP6203BM Bluetooth H4 HCI |
+| 3 | Base | **GPIO0..GPIO4, AOGPIO** | `snps,designware-gpio` (`gpio_dw`) | `0xffec005000`..`0xfff7f1c000` | `55`..`59`, `76` | `gpio4`: 5x User LEDs<br>`gpio2`: AP6203BM Wi-Fi/BT control lines<br>`gpio0`: MikroBUS INT |
+| 4 | Base | **I2C0 & AT24C32 EEPROM** | `snps,designware-i2c` (`i2c_dw`) + `atmel,at24` | `0xffe7f20000` | `44` | Onboard 4 KiB AT24C32 EEPROM at `0x50` |
+| 5 | Base | **AON_I2C & DA9063 PMIC** | `snps,designware-i2c` (`i2c_dw`) | `0xfffff4c000` | `79` | Onboard Dialog DA9063 PMIC at `0x58` (`VBCORE1_A`, `VBCORE2_A`, `DVC_2`) |
+| 6 | Base | **SPI0 (`mikrobus_spi`)** | `snps,designware-spi` (`spi_dw`) | `0xffe700c000` | `54` | Full-duplex DesignWare SSI master |
+| 7 | Base | **TIMER0..TIMER7** | `snps,dw-timers` (`counter_dw`) | `0xffefc32000` | `16`..`23` | 8x DesignWare 32-bit countdown timers with alarm IRQ callbacks |
+| 8 | Base | **WDT0, WDT1** | `snps,designware-watchdog` (`wdt_dw`) | `0xffefc30000` | `24`, `25` | 2x DesignWare hardware watchdogs + `AP_RESET` disarm |
+| 9 | **Track 1.1** | **TH1520 6-Channel PWM** | `thead,th1520-pwm` (`drivers/pwm/pwm_th1520.c`) | `0xffec01c000` | — | 6-channel PWM controller wired to `mikrobus_header` PWM pin |
+| 10 | **Track 1.2** | **TH1520 Pinmux / Pinctrl** | `thead,th1520-pinctrl` (`drivers/pinctrl/pinctrl_th1520.c`) | `0xfffff4a000` (AOSYS)<br>`0xffec007000` (PADCTRL1)<br>`0xffe7f3c000` (PADCTRL0) | — | Dynamic pad multiplexing, pull-up/pull-down, Schmitt trigger & drive strength |
+| 11 | **Track 1.3a** | **Moortec MR75203 PVT** | `moortec,mr75203` (`drivers/sensor/moortec/mr75203/mr75203.c`) | `0xfffff4e000` | — | On-die temperature (`SENSOR_CHAN_DIE_TEMP`) & core voltage (`SENSOR_CHAN_VOLTAGE`) |
+| 12 | **Track 1.3b** | **APM X-Gene / DW RTC** | `apm,xgene-rtc` (`drivers/rtc/rtc_xgene.c`) | `0xfffff40000` | `74` | Hardware Real-Time Clock (`rtc_set_time` / `rtc_get_time`) |
+| 13 | **Track 1.4** | **DesignWare AXI DMA** | `snps,axi-dma-1.01a` (`drivers/dma/dma_dw_axi.c`) | `0xffefc00000` | `27` | 8-channel 64-bit AXI DMAC (M2M buffer copy + M2P UART3 TX DMA) |
+| 14 | **Track 2.1** | **Gigabit Ethernet (`gmac0`)** | `thead,th1520-gmac` (`drivers/ethernet/eth_th1520_gmac.c`) | `0xffe7070000` + APB `0xffec003000` | `66` | DesignWare GMAC + RTL8211F PHY + Zephyr IPv4/UDP socket stack |
+| 15 | **Track 2.2** | **Bluetooth H4 HCI (`ap6203bm`)** | `zephyr,bt-hci-uart` (`CONFIG_BT_H4` over `uart4`) | `0xfff7f08000` | `40` | Onboard AP6203BM BLE H4 HCI controller, BLE advertising & active scanning |
+| 16 | **Track 2.3** | **Synopsys DWC MSHC eMMC** | `thead,th1520-dwcmshc` (`drivers/disk/sdmmc_dwcmshc.c`) | `0xffe7080000` | `62` | SDHCI/eMMC ADMA2/PIO block storage (`disk_access` `"EMMC"` read/write) |
+| 17 | **Track 3** | **MikroE Click Boards** | `bosch,bme280` (`i2c3` @ `0x76`)<br>`microchip,mcp251xfd` (`spi0` CS0, INT `gpio0` pin 20) | `0xffec014000` (`i2c3`)<br>`0xffe700c000` (`spi0`) | `47` (`i2c3`)<br>`54` (`spi0`), `56` (`gpio0`) | Bosch BME280 Weather Click (`T`, `P`, `RH`) + Microchip MCP2518FD CAN-FD Click (16-byte BRS CAN-FD TX/RX) |
+| 18 | **Track 4** | **TH1520 Mailbox & SRAM AMP** | `thead,th1520-mbox` (`drivers/mbox/mbox_th1520.c`) | `0xffffc38000` (`mbox0`)<br>`0xffe0000000` (`sram0`) | `28` | Hardware Mailbox IPC + Shared-Memory AMP RPMsg ring + On-Chip SRAM execution target |
 
 ---
 
-## 3. Files Created & Modified
-
-### 3.1 New Zephyr SoC & Board Files (`/Users/kmehltretter/codex/zephyr/zp/zephyr`)
-
-- **Devicetree Bindings & SoC DTSI:**
-  - `dts/bindings/vendor-prefixes.txt` — Registered `thead` vendor prefix (`T-Head Semiconductor Co., Ltd.`).
-  - `dts/bindings/cpu/thead,c910.yaml` — CPU binding for XuanTie C910 cores.
-  - `dts/riscv/thead/th1520.dtsi` — Complete TH1520 SoC devicetree (`cpus`, `clint`, `plic`, `uart0..5`, `i2c0..5`, `aon_i2c`, `spi0`, `gpio0..4`, `aogpio`, `timer0..7`, `wdt0..1`).
-- **T-Head TH1520 SoC Layer (`soc/thead/th1520/`):**
-  - `soc.yml`, `Kconfig.soc`, `Kconfig`, `Kconfig.defconfig`, `CMakeLists.txt`
-  - `soc.h` — Defines T-Head XuanTie C910 vendor CSRs (`CSR_TH_MXSTATUS`, `CSR_TH_SXSTATUS`, `CSR_TH_MHCR`, `CSR_TH_MHINT`, `CSR_TH_MCOR`, `CSR_TH_CPUID`, `CSR_TH_MAPBADDR`) and `TH1520_PLIC_CTRL_ADDR` (`0xffd81ffffc`).
-  - `soc.c` — Early `soc_early_init_hook()` delegating PLIC S-mode access (`PLIC_CTRL = 1`) when running in M-mode.
-- **BeagleV-Ahead Board Layer (`boards/beagle/beaglev_ahead/`):**
-  - `board.yml`, `board.cmake`, `Kconfig.beaglev_ahead`, `Kconfig.defconfig`
-  - `beaglev_ahead.dts` — Base board DTS (`4 GiB` DRAM, `gpio-leds` `USR0..USR4`, `eeprom0: eeprom@50` on `i2c0`, `mikrobus_header`, aliases).
-  - `beaglev_ahead_th1520_defconfig` — M-mode single-core defconfig.
-  - `beaglev_ahead_th1520_smp.dts` & `beaglev_ahead_th1520_smp_defconfig` — M-mode 4-core SMP.
-  - `beaglev_ahead_th1520_smode.dts` & `beaglev_ahead_th1520_smode_defconfig` — S-mode with Zephyr internal M-mode SBI.
-  - `beaglev_ahead_th1520_opensbi.dts` & `beaglev_ahead_th1520_opensbi_defconfig` — S-mode with external OpenSBI (`0x00200000` load offset).
-  - `beaglev_ahead_th1520_opensbi_smp.dts` & `beaglev_ahead_th1520_opensbi_smp_defconfig` — S-mode 4-core SMP with external OpenSBI.
-
-### 3.2 Zephyr Kernel & Driver Fixes (`/Users/kmehltretter/codex/zephyr/zp/zephyr`)
-
-1. **`drivers/timer/riscv_machine_timer.c` (`thead,c900-clint` Support):**
-   - `thead,c900-clint` is a 32-bit APB peripheral without an MMIO `mtime` register; C910 reads the 64-bit counter via `csr_read(time)` and requires two 32-bit `sw` writes (`0xffffffff` high-word guard followed by low word, then high word) to `mtimecmp`.
-2. **`arch/riscv/core/sbi.S` & `arch/riscv/core/reset.S` (Zephyr Internal SBI on TH1520):**
-   - Updated `sbi_ecall_handler` in `sbi.S` to perform two 32-bit `sw` writes to `MTIMECMP0` when `!DT_REG_HAS_NAME(DT_INST(0, riscv_machine_timer), mtime)`.
-   - Guarded `csrw pmpaddr0` / `csrw pmpcfg0` in `reset.S` with `#if CONFIG_PMP_SLOTS > 0` and set `thead,c900-plic` `PLIC_CTRL = 1` (`0xffd81ffffc`) before `mret` into S-mode.
-3. **`drivers/interrupt_controller/intc_plic.c` (S-mode PLIC Context & IRQ Routing):**
-   - Added `PLIC_IRQN(n)` so S-mode kernels connect `RISCV_IRQ_SEXT` (IRQ 9) instead of M-mode `11` (`MEIP`) and map `hart_context` to S-mode PLIC contexts `{1, 3, 5, 7}` while keeping `DT_INST_IRQN(n)` (`11`) in `IRQ_PARENT_ENTRY_DEFINE`.
-4. **`drivers/i2c/i2c_dw.c` (DesignWare I2C NACK / `TX_ABRT` Error Handling):**
-   - Fixed `i2c_dw_data_send()` and `i2c_dw_isr()` so an I2C NACK (`TX_ABRT`) sets `I2C_DW_CMD_ERROR` and clears `tx_abrt`, ensuring `i2c_transfer()` returns `-EIO` on missing addresses and `i2c scan` detects only present slaves.
-5. **`drivers/watchdog/wdt_dw.{c,h}` & `wdt_dw_common.{c,h}` (64-bit MMIO & Counter Width):**
-   - Changed `uint32_t base` to `uintptr_t base` across all functions so 64-bit MMIO addresses above 4 GiB (`0xffefc30000`) are not truncated.
-   - Defaulted `dw_wdt_cnt_width_get()` to 32 bits when `WDT_COMP_PARAM_1.WDT_CNT_WIDTH` is `0`, and programmed both `TOP_INIT` and `TOP` in `dw_wdt_configure()`.
-
-### 3.3 QEMU Fork Fixes (`/Users/kmehltretter/codex/zephyr/qemu-th1520`)
-
-1. **`hw/riscv/th1520.c` (`beaglev_ahead_machine_done` Direct-Boot Entry):**
-   - When `-bios none -kernel <elf>` is passed, `riscv_load_kernel()` loads the ELF and returns its entry point (`kernel_entry`), e.g. `0x00000000` (DRAM) or `0xffe0000000` (SRAM). Updated `beaglev_ahead_machine_done()` to pass `kernel_entry` to `riscv_setup_rom_reset_vec()` instead of hardcoded `ram_base`.
-2. **`hw/riscv/boot.c` (`riscv_compute_fdt_addr` High-Address SRAM Support):**
-   - When a kernel is linked in high MMIO SRAM (`0xffe0000000`, above DRAM), `riscv_compute_fdt_addr()` previously clamped `temp` to `kernel_start` and triggered `g_assert(dtb_start < dtb_start_limit)`. Guarded the `MIN(dram_end, kernel_start)` clamp to apply only when `kernel_start > dram_base && kernel_start < dram_end`.
-3. **`hw/i2c/designware_i2c.c` (DesignWare I2C `RFNE`/`RFF` Status & Repeated-Start Ordering):**
-   - Added `dw_i2c_update_rx_status()` to set/clear `R_DW_IC_STATUS_RFNE_MASK` (bit 3) and `R_DW_IC_STATUS_RFF_MASK` (bit 4) in `DW_IC_STATUS` whenever `rx_fifo` is pushed, popped, or reset.
-   - Moved `R_DW_IC_DATA_CMD_RESTART_MASK` handling before `/* Send data */` so combined write+read (`i2c_write_read` / EEPROM random reads) cleanly transition the slave to read direction on repeated START.
-   - All 8 `/riscv64/beaglev-ahead/dw-i2c/*` and all 7 `/riscv64/beaglev-ahead/boot/*` QEMU QTests pass 100%.
-
----
-
-## 4. Building & Running Zephyr on BeagleV-Ahead QEMU
-
-### 4.1 Environment Setup
+## 3. Building & Running the 18-Subsystem Verification Suite
 
 ```bash
 export ZEPHYR_BASE=/Users/kmehltretter/codex/zephyr/zp/zephyr
 export ZEPHYR_SDK_INSTALL_DIR=/Users/kmehltretter/codex/zephyr/sdk
 export PATH="/Users/kmehltretter/codex/zephyr/.venv/bin:$PATH"
-```
-
-### 4.2 Running the 8-Subsystem Hardware Verification Suite (`beaglev_ahead_verify`)
-
-The standalone verification application in `/Users/kmehltretter/codex/zephyr/zp/beaglev_ahead_verify` tests all 8 hardware subsystems:
-1. XuanTie C910 CPU CSRs (`CSR_TH_MXSTATUS`, `CSR_TH_SXSTATUS`, `CSR_TH_CPUID`) & SMP Hart Discovery
-2. 3 MHz System Timer (`thead,c900-clint`) & Preemptive Multi-Threading
-3. DesignWare GPIO (`gpio4` onboard LEDs `USR0..USR4`, `gpio2` Wi-Fi/BT lines, `aogpio`, and GPIO loopback interrupt)
-4. DesignWare I2C0 + Onboard AT24C32 4 KiB EEPROM (`0x50`) write/read/restore verification
-5. DesignWare AON_I2C + Onboard Dialog DA9063 PMIC (`0x5a`) Silicon/Variant ID & Buck converter telemetry
-6. DesignWare SPI0 (`mikrobus_spi`) Master Transaction + MikroBUS I2C3 (`mikrobus_i2c`) & UART3 (`mikrobus_serial`) readiness
-7. DesignWare APB Hardware Counter/Timer (`timer0` @ `0xffefc32000`) live countdown + PLIC IRQ 64 alarm callback
-8. DesignWare Hardware Watchdog (`wdt0` @ `0xffefc30000`) timeout installation, setup, and `wdt_feed()` kick
-
-```bash
 cd /Users/kmehltretter/codex/zephyr/zp
 
-# 1. M-mode single-core
-west build -p always -b beaglev_ahead/th1520 -d build-verify-mmode beaglev_ahead_verify
-west build -d build-verify-mmode -t run
+# 1. M-Mode Direct DRAM Boot (beaglev_ahead/th1520)
+west build -b beaglev_ahead/th1520 -d build-verify-mmode zephyr/samples/boards/beagle/beaglev_ahead_verify
+/Users/kmehltretter/codex/zephyr/qemu-build/qemu-system-riscv64 -machine beaglev-ahead -nographic \
+  -bios build-verify-mmode/zephyr/zephyr.elf
 
-# 2. M-mode 4-core SMP
-west build -p always -b beaglev_ahead/th1520/smp -d build-verify-smp beaglev_ahead_verify
-west build -d build-verify-smp -t run
+# 2. S-Mode OpenSBI Boot (beaglev_ahead/th1520/opensbi)
+west build -b beaglev_ahead/th1520/opensbi -d build-verify-opensbi zephyr/samples/boards/beagle/beaglev_ahead_verify
+/Users/kmehltretter/codex/zephyr/qemu-build/qemu-system-riscv64 -machine beaglev-ahead -nographic \
+  -kernel build-verify-opensbi/zephyr/zephyr.elf
 
-# 3. S-mode with Zephyr internal SBI
-west build -p always -b beaglev_ahead/th1520/smode -d build-verify-smode beaglev_ahead_verify
-west build -d build-verify-smode -t run
-
-# 4. S-mode with external OpenSBI
-west build -p always -b beaglev_ahead/th1520/opensbi -d build-verify-opensbi beaglev_ahead_verify
-west build -d build-verify-opensbi -t run
-
-# 5. S-mode 4-core SMP with external OpenSBI
-west build -p always -b beaglev_ahead/th1520/opensbi_smp -d build-verify-opensbi-smp beaglev_ahead_verify
-west build -d build-verify-opensbi-smp -t run
+# 3. Track 4: On-Chip SRAM Execution at 0xffe0000000 (beaglev_ahead/th1520/sram)
+west build -b beaglev_ahead/th1520/sram -d build-verify-sram zephyr/samples/boards/beagle/beaglev_ahead_verify
+/Users/kmehltretter/codex/zephyr/qemu-build/qemu-system-riscv64 -machine beaglev-ahead -nographic \
+  -bios build-verify-sram/zephyr/zephyr.elf
 ```
-
-### 4.3 Running the Interactive Zephyr Shell (`shell_module`) with GPIO, I2C & EEPROM Commands
-
-```bash
-cd /Users/kmehltretter/codex/zephyr/zp
-west build -p always -b beaglev_ahead/th1520/smp -d build-shell zephyr/samples/subsys/shell/shell_module \
-  -- -DCONFIG_GPIO=y -DCONFIG_GPIO_SHELL=y -DCONFIG_I2C=y -DCONFIG_I2C_SHELL=y -DCONFIG_EEPROM=y -DCONFIG_EEPROM_SHELL=y
-west build -d build-shell -t run
-```
-
-Inside the interactive shell (`uart:~$`):
-- `kernel cpus` — View all 4 active C910 cores
-- `device list` — View all initialized TH1520 peripherals (`plic`, `gpio0..4`, `aogpio`, `uart0`, `uart3`, `i2c0`, `i2c3`, `aon_i2c`, `eeprom0`)
-- `i2c scan i2c@ffe7f20000` — Scan `i2c0` (discovers `0x50` AT24C32 EEPROM)
-- `i2c scan i2c@fffff4c000` — Scan `aon_i2c` (discovers `0x5a` DA9063 PMIC)
-- `i2c read_byte i2c@fffff4c000 5a 81` — Read DA9063 PMIC `CHIP_ID` (`0x61`)
-- `eeprom read eeprom@50 0x0 32` — Hexdump onboard EEPROM contents
-- `gpio conf gpio@fff7f1c000 8 o1` — Toggle BeagleV-Ahead onboard LED `USR0`
 
 ---
 
-## 5. Verification Output Logs
-
-### 5.1 M-Mode 4-Core SMP (`beaglev_ahead/th1520/smp`)
+## 4. Verification Output Log (18/18 Passing)
 
 ```text
-*** Booting Zephyr OS build v4.4.0-rc2-94-g1ff8dfca2c77 ***
+*** Booting Zephyr OS build v4.5.0-rc3 ***
 
-====================================================================
-  BeagleV-Ahead (T-Head TH1520) Zephyr RTOS Hardware Verification
-  Board Target : beaglev_ahead/th1520/smp
-  Execution    : M-mode (Direct Boot)
-  Configured   : 4 CPU core(s)
-====================================================================
+================================================================
+ BeagleV-Ahead (T-Head TH1520) Full Hardware & Track 1-4 Suite
+ Board: beaglev_ahead | SoC: Quad-Core XuanTie C910 (RV64GC)
+================================================================
 
-[1/8] CPU & XuanTie C910 Vendor CSR Verification
-  mvendorid    = 0x000005b7 (T-Head = 0x5b7)
-  marchid      = 0x00000000
-  mimpid       = 0x00000000
-  th.mxstatus  = 0x00c08000 (C910 extended ISA enabled: bit22=1)
-  th.cpuid     = 0x00000000
-  SMP CPU[0] responded from hardware hart_id = 0
-  SMP CPU[1] responded from hardware hart_id = 1
-  SMP CPU[2] responded from hardware hart_id = 2
-  SMP CPU[3] responded from hardware hart_id = 3
-  [PASS] 1. CPU & SMP Verification (4/4 cores active)
+[1/18] CPU, Vendor CSRs & SMP Verification
+  Mode: M-Mode (Direct) (mvendorid=0x5b7, marchid=0x0, mimpid=0x0)
+  T-Head CSRs: MXSTATUS=0x00c08000 MHCR=0x000011ff MHINT=0x0016e30c MCPUID=0x0804010d
+  Active CPUs: 1
+  [PASS] XuanTie C910 CPU & vendor CSRs verified
 
-[2/8] System Timer (thead,c900-clint @ 3 MHz) & Multi-Threading
-  50 ms sleep : elapsed = 51 ms, cycles = 152834 (expected ~150000 @ 3 MHz)
-  [PASS] 2. CLINT System Timer & Multi-Threading Verification
+[2/18] PLIC Interrupt-Driven UART3 (mikrobus_serial) Verification
+  TX/RX via PLIC IRQ 39: 'Z' (0x5a)
+  [PASS] UART3 PLIC interrupt-driven TX/RX verified
 
-[3/8] DesignWare GPIO (5x User LEDs, AP6203BM Wi-Fi/BT, AOGPIO, IRQ)
-  Toggled 5 BeagleV-Ahead User LEDs (USR0..USR4 on gpio4 pins 8..12)
-  AP6203BM Wi-Fi/BT control lines on gpio2 pins 22/24/25 verified
-  GPIO interrupt fired on gpio0 pin 0 (count = 1)
-  [PASS] 3. DesignWare GPIO & Interrupt Verification
+[3/18] DesignWare GPIO, Onboard User LEDs & AP6203BM Control Verification
+  Toggled 5 onboard User LEDs (GPIO4_8..12) and AP6203BM WL_REG_ON/BT_REG_ON (GPIO2_31/28)
+  [PASS] DesignWare GPIO & onboard lines verified
 
-[4/8] DesignWare I2C0 & Onboard AT24C32 4 KiB EEPROM (0x50)
-  EEPROM size  = 4096 bytes
-  Wrote & verified 10 bytes at EEPROM offset 0x0040: "ZEPHYR-BVA"
-  [PASS] 4. DesignWare I2C0 & AT24C32 EEPROM Verification
+[4/18] DesignWare I2C0 & Onboard AT24C32 EEPROM (0x50) Verification
+  EEPROM magic readback @ 0x0000: "BVA-TH1520-OK!"
+  [PASS] DesignWare I2C0 & AT24C32 EEPROM verified
 
-[5/8] DesignWare AON_I2C & Dialog DA9063 PMIC (0x5a)
-  DA9063 CHIP_ID    = 0x61 (expected 0x61)
-  DA9063 VARIANT_ID = 0x50
-  DA9063 STATUS_A   = 0x01
-  DA9063 BPRO_CONT  = 0x01 -> 0x03 -> 0x01
-  [PASS] 5. DesignWare AON_I2C & DA9063 PMIC Verification
+[5/18] AON I2C & Dialog DA9063 PMIC (0x58) Verification
+  DA9063 VBCORE1_A=0x7a, VBCORE2_A=0x78, DVC_2=0x81 (masked 0x81)
+  [PASS] AON I2C & Dialog DA9063 PMIC verified
 
-[6/8] MikroBUS Expansion Buses (SPI0, I2C3, UART3)
-  SPI0 master transfer (4 bytes @ 1 MHz) completed cleanly
-  [PASS] 6. MikroBUS SPI0, I2C3, and UART3 Verification
+[6/18] DesignWare SPI0 (mikrobus_spi) Verification
+  Transceived 8 bytes on spi0 @ 10 MHz via PLIC IRQ 54
+  [PASS] DesignWare SPI0 (mikrobus_spi) verified
 
-[7/8] DesignWare APB Hardware Timer (timer0 @ 0xffefc32000)
-  timer0 counter freq = 100000000 Hz, top_value = 0xffffffff
-  timer0 live countdown verified: 4294957296 -> 4294757296 (delta = 200000 ticks)
-  timer0 alarm IRQ fired (ticks = 4294967295)
-  [PASS] 7. DesignWare APB Timer0 & Alarm IRQ Verification
+[7/18] DesignWare APB Timer0 (PLIC IRQ 16 @ 125 MHz) Verification
+  Timer0 alarm fired via PLIC IRQ 16 (configured 625000 ticks)
+  [PASS] DesignWare APB Timer0 verified
 
-[8/8] DesignWare Hardware Watchdog (wdt0 @ 0xffefc30000)
-  wdt0 configured (channel = 0, window = 2000 ms) and fed 3x via WDT_CRR (0x76)
-  [PASS] 8. DesignWare Watchdog (wdt0) Verification
+[8/18] DesignWare Watchdog0 (wdt0 @ 125 MHz, PLIC IRQ 24) Verification
+  Watchdog0 armed, fed 3x, fired PLIC IRQ 24 & disarmed via AP_RESET
+  [PASS] DesignWare Watchdog0 verified
 
-====================================================================
-  SUMMARY: 8 PASSED, 0 FAILED (out of 8 subsystems)
-  ALL 8/8 BEAGLEV-AHEAD HARDWARE SUBSYSTEMS PASSED!
-====================================================================
-```
+[9/18] [Track 1.1] TH1520 6-Channel PWM (pwm0 @ 0xffec01c000) Verification
+  Ch0 (20 kHz, 25%): CTRL=0x120 PERIOD=5000 FP=1250
+  Ch1 (10 kHz, 75% inv): CTRL=0x020 PERIOD=10000 FP=7500
+  [PASS] TH1520 6-Channel PWM verified
 
-### 5.2 OpenSBI S-Mode 4-Core SMP (`beaglev_ahead/th1520/opensbi_smp`)
+[10/18] [Track 1.2] TH1520 Pinctrl (PADCTRL0/1_APSYS & AOSYS) Verification
+  PADCTRL0_APSYS PADCFG[5]=0x02280208, MUXCFG[0]=0x00001000, MUXCFG[1]=0x00011000
+  [PASS] TH1520 Pinctrl pad multiplexing, pull-ups & drive-strength verified
 
-```text
-OpenSBI v1.7
-   ____                    _____ ____ _____
-  / __ \                  / ____|  _ \_   _|
- | |  | |_ __   ___ _ __ | (___ | |_) || |
- | |  | | '_ \ / _ \ '_ \ \___ \|  _ < | |
- | |__| | |_) |  __/ | | |____) | |_) || |_
-  \____/| .__/ \___|_| |_|_____/|____/_____|
-        | |
-        |_|
+[11/18] [Track 1.3a] Moortec MR75203 On-Die PVT Sensor Verification
+  On-Die Temperature: 45.286 C, Core Voltage: 0.800 V
+  [PASS] Moortec MR75203 On-Die PVT temperature & voltage verified
 
-Platform Name             : BeagleV-Ahead (T-Head TH1520)
-Platform Features         : medeleg
-Platform HART Count       : 4
-Platform IPI Device       : aclint-mswi
-Platform Timer Device     : aclint-mtimer @ 3000000Hz
-Platform Console Device   : uart8250
-...
-*** Booting Zephyr OS build v4.4.0-rc2-94-g1ff8dfca2c77 ***
+[12/18] [Track 1.3b] DesignWare / X-Gene RTC (rtc0 @ 0xfffff40000) Verification
+  RTC UTC readback: 2026-10-25 14:30:45
+  [PASS] DesignWare / X-Gene RTC calendar read/write verified
 
-====================================================================
-  BeagleV-Ahead (T-Head TH1520) Zephyr RTOS Hardware Verification
-  Board Target : beaglev_ahead/th1520/opensbi_smp
-  Execution    : S-mode (External OpenSBI)
-  Configured   : 4 CPU core(s)
-====================================================================
-...
-  SUMMARY: 8 PASSED, 0 FAILED (out of 8 subsystems)
-  ALL 8/8 BEAGLEV-AHEAD HARDWARE SUBSYSTEMS PASSED!
-====================================================================
+[13/18] [Track 1.4] DesignWare AXI DMA (dmac0 @ 0xffefc00000, IRQ 27) Verification
+  AXI DMA Ch0 M2M (64 B) & Ch1 M2P -> UART3 THR (8 chars) completed via IRQ 27
+  [PASS] DesignWare AXI DMA M2M & M2P transfers verified
+
+[14/18] [Track 2.1] Gigabit Ethernet (gmac0 @ 0xffe7070000 + IPv4/UDP) Verification
+  GMAC0 MAC=02:be:a6:15:20:01 IPv4=192.0.2.10 L2 TX/RX & UDP/4242 "ZEPHYR_TH1520_GMAC0_UDP_OK" OK
+  [PASS] Gigabit Ethernet (gmac0 + RTL8211F PHY + Zephyr IPv4/UDP) verified
+
+[15/18] [Track 2.2] Bluetooth H4 UART4 HCI (AP6203BM BLE Adv/Scan) Verification
+  AP6203BM H4 HCI initialized, BLE advertising & active scan (1 adv seen) OK
+  [PASS] Bluetooth H4 UART4 HCI (AP6203BM) verified
+
+[16/18] [Track 2.3] Synopsys DWC MSHC eMMC0 (mshc0 @ 0xffe7080000) Verification
+  eMMC capacity: 4096 sectors (2048 KiB), LBA 16..17 write/read (1024 B) verified
+  [PASS] Synopsys DWC MSHC eMMC0 block storage verified
+
+[17/18] [Track 3] MikroE Click Boards (BME280 Weather + MCP2518FD CAN-FD)
+  BME280 Weather Click (i2c3 @ 0x76): T=25.10 C, P=100.65 kPa, RH=53.36 %
+  MCP2518FD CAN-FD Click (spi0): 16-byte BRS CAN-FD frame ID=0x123 TX->RX OK
+  [PASS] MikroE Weather Click (BME280) & CAN-FD Click (MCP2518FD) verified
+
+[18/18] [Track 4] TH1520 Hardware Mailbox (mbox0) & On-Chip SRAM AMP IPC
+  Executing PC=0xffe00005fc (On-Chip SRAM 0xffe0000000), MBOX0 IRQ 28 + SRAM IPC "AMP_RPMSG_CORE0_TO_CORE3_SRAM_OK" OK
+  [PASS] TH1520 Hardware Mailbox & AMP Shared-SRAM IPC verified
+
+================================================================
+ ALL 18/18 BEAGLEV-AHEAD HARDWARE & TRACK 1-4 SUBSYSTEMS PASSED!
+================================================================
 ```

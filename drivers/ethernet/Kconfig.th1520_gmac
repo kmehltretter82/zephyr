@@ -1,0 +1,19 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config ETH_TH1520_GMAC
+	bool "T-Head TH1520 Synopsys DesignWare Gigabit Ethernet driver"
+	default y
+	depends on DT_HAS_THEAD_TH1520_GMAC_ENABLED
+	help
+	  Enable Ethernet driver for the T-Head TH1520 Synopsys DesignWare
+	  Gigabit Ethernet MAC (gmac0 / gmac1) with RGMII APB clock glue and
+	  Realtek RTL8211F PHY management.
+
+if ETH_TH1520_GMAC
+
+config ETH_NIC_MODEL
+	string
+	default "gmac0"
+
+endif # ETH_TH1520_GMAC

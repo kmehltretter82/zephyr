@@ -375,6 +375,7 @@ static void dma_dw_axi_isr(const struct device *dev)
 	if (ch_status & DMA_DW_AXI_IRQ_BLOCK_TFR) {
 		sys_write64(DMA_DW_AXI_IRQ_ALL_ERR | DMA_DW_AXI_IRQ_BLOCK_TFR,
 				reg_base + DMA_DW_AXI_CH_INTCLEARREG(channel));
+		atomic_set(&chan_data->ch_state, dma_dw_axi_get_ch_status(dev, channel));
 
 		if (chan_data->dma_blk_xfer_callback) {
 			chan_data->dma_blk_xfer_callback(dev,
@@ -386,11 +387,11 @@ static void dma_dw_axi_isr(const struct device *dev)
 	if (ch_status & DMA_DW_AXI_IRQ_DMA_TFR) {
 		sys_write64(DMA_DW_AXI_IRQ_ALL_ERR | DMA_DW_AXI_IRQ_DMA_TFR,
 				reg_base + DMA_DW_AXI_CH_INTCLEARREG(channel));
+		atomic_set(&chan_data->ch_state, dma_dw_axi_get_ch_status(dev, channel));
 
 		if (chan_data->dma_xfer_callback) {
 			chan_data->dma_xfer_callback(dev, chan_data->priv_data_xfer,
 						channel, ret_status);
-			atomic_set(&chan_data->ch_state, dma_dw_axi_get_ch_status(dev, channel));
 		}
 	}
 }
@@ -581,6 +582,13 @@ static int dma_dw_axi_config(const struct device *dev, uint32_t channel,
 		lli_desc->sar = blk_cfg->source_address;
 		lli_desc->dar = blk_cfg->dest_address;
 
+		if (blk_cfg->source_addr_adj == DMA_ADDR_ADJ_NO_CHANGE) {
+			lli_desc->ctl |= BIT64(4);
+		}
+		if (blk_cfg->dest_addr_adj == DMA_ADDR_ADJ_NO_CHANGE) {
+			lli_desc->ctl |= BIT64(6);
+		}
+
 		/* set block transfer size*/
 		lli_desc->block_ts_lo = (blk_cfg->block_size / cfg->source_data_size) - 1;
 		if (lli_desc->block_ts_lo > CONFIG_DMA_DW_AXI_MAX_BLOCK_TS) {
@@ -752,6 +760,7 @@ static int dma_dw_axi_start(const struct device *dev, uint32_t channel)
 #endif
 
 	/* Enable the channel which will initiate DMA transfer */
+	atomic_set(&chan_data->ch_state, DMA_DW_AXI_CH_ACTIVE);
 	sys_write64(CH_EN(channel), reg_base + DMA_DW_AXI_CHENREG);
 	atomic_set(&chan_data->ch_state, dma_dw_axi_get_ch_status(dev, channel));
 	return 0;
@@ -922,13 +931,13 @@ static DEVICE_API(dma, dma_dw_axi_driver_api) = {
 
 /* enable irq lines */
 #define CONFIGURE_DMA_IRQ(idx, inst) \
-	IF_ENABLED(DT_INST_IRQ_HAS_IDX(inst, idx), ( \
-		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(inst, idx, irq), \
+	COND_CODE_1(DT_INST_IRQ_HAS_IDX(inst, idx), ( \
+		IRQ_CONNECT(DT_INST_IRQN_BY_IDX(inst, idx), \
 			DT_INST_IRQ_BY_IDX(inst, idx, priority), \
 			dma_dw_axi_isr, \
 			DEVICE_DT_INST_GET(inst), 0); \
-			irq_enable(DT_INST_IRQ_BY_IDX(inst, idx, irq)); \
-	))
+			irq_enable(DT_INST_IRQN_BY_IDX(inst, idx)); \
+	), ())
 
 #define DW_AXI_DMA_RESET_SPEC_INIT(inst) \
 	.reset = RESET_DT_SPEC_INST_GET(inst), \

@@ -1,0 +1,34 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+description: T-Head TH1520 Pad / Pinmux Controller (PADCTRL_AOSYS, PADCTRL0_APSYS, PADCTRL1_APSYS)
+
+compatible: "thead,th1520-pinctrl"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  thead,pad-group:
+    type: int
+    required: true
+    description: Pad controller group ID (1 = AOSYS, 2 = PADCTRL0_APSYS, 3 = PADCTRL1_APSYS)
+
+child-binding:
+  description: TH1520 pin configuration node
+  include:
+    - name: pincfg-node.yaml
+      property-allowlist:
+        - bias-disable
+        - bias-pull-up
+        - bias-pull-down
+        - drive-strength
+        - input-enable
+        - input-schmitt-enable
+  properties:
+    pinmux:
+      required: true
+      type: int
+      description: Encoded pinmux value created with TH1520_PINMUX(pin, func, padcfg)

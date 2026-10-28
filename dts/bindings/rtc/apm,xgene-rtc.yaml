@@ -1,0 +1,15 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+description: APM X-Gene / T-Head TH1520 Synopsys DesignWare APB Real-Time Clock (RTC)
+
+compatible: "apm,xgene-rtc"
+
+include: [rtc.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

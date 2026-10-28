@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config PWM_TH1520
+	bool "T-Head TH1520 PWM driver"
+	default y
+	depends on DT_HAS_THEAD_TH1520_PWM_ENABLED
+	help
+	  Enable driver for the T-Head TH1520 6-channel Pulse Width Modulation
+	  (PWM) controller.

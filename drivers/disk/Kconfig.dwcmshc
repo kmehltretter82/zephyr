@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config DISK_DRIVER_TH1520_DWCMSHC
+	bool "T-Head TH1520 Synopsys DWC MSHC eMMC/SDHCI disk driver"
+	default y
+	depends on DT_HAS_THEAD_TH1520_DWCMSHC_ENABLED
+	help
+	  Enable block disk driver for the T-Head TH1520 Synopsys DesignWare
+	  Mobile Storage Host Controller (mshc0 eMMC / mshc1 SDHCI).

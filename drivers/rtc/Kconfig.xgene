@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config RTC_XGENE
+	bool "APM X-Gene / T-Head TH1520 DesignWare APB RTC driver"
+	default y
+	depends on DT_HAS_APM_XGENE_RTC_ENABLED
+	help
+	  Enable driver for the Synopsys DesignWare APB Real-Time Clock
+	  (apm,xgene-rtc) used on APM X-Gene and T-Head TH1520 SoCs.

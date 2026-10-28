@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config PINCTRL_TH1520
+	bool "T-Head TH1520 pin controller driver"
+	default y
+	depends on DT_HAS_THEAD_TH1520_PINCTRL_ENABLED
+	help
+	  Enable the T-Head TH1520 pad/pinmux controller driver for
+	  PADCTRL_AOSYS, PADCTRL0_APSYS, and PADCTRL1_APSYS.

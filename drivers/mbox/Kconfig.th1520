@@ -1,0 +1,11 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config MBOX_TH1520
+	bool "T-Head TH1520 Inter-Processor Mailbox driver"
+	default y
+	depends on DT_HAS_THEAD_TH1520_MBOX_ENABLED
+	help
+	  Enable driver for the T-Head TH1520 hardware mailbox controller
+	  supporting multi-core AMP / RPMsg / OpenAMP inter-processor
+	  signaling and 32-byte hardware message registers.

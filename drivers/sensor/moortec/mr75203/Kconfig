@@ -1,0 +1,10 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+config MR75203
+	bool "Moortec MR75203 On-Die PVT Sensor"
+	default y
+	depends on DT_HAS_MOORTEC_MR75203_ENABLED
+	help
+	  Enable driver for the Moortec MR75203 Process, Voltage, and
+	  Temperature (PVT) monitor used on the T-Head TH1520 SoC.

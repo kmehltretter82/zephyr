@@ -1,0 +1,22 @@
+# Copyright (c) 2026 BeagleBoard.org Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+description: T-Head TH1520 Inter-Processor Hardware Mailbox (MBOX)
+
+compatible: "thead,th1520-mbox"
+
+include: [mailbox-controller.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+    description: Local CPU0 aperture and three remote ICU apertures (remote-icu0..2)
+
+  interrupts:
+    required: true
+
+  "#mbox-cells":
+    const: 1
+
+mbox-cells:
+  - channel
